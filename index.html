@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Carte interactive du projet NexShop AIOps : chaque couche du système, son rôle et son dépôt GitHub.">
+<title>NexShop AIOps</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@500;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout : schéma de système lu de gauche à droite (infra → IA), une fiche de détail sous la carte,
+   puis l'ordre de lecture et les résultats. Couleurs de couche = couches de la pile, pas décoration. */
+:root{
+  --bg:#f3f5f6; --surface:#ffffff; --ink:#132029; --muted:#55636d; --line:#d3dadf;
+  --accent:#0b6b73; --accent-soft:#e1efef;
+  --l-infra:#5a6b7a; --l-app:#2f6db0; --l-obs:#b26a12; --l-cloud:#3a7d5a; --l-data:#8a4fa3; --l-ml:#b8434a; --l-plat:#0b6b73;
+  --good:#2e7d4f; --bad:#b8434a;
+  --f-display:"Schibsted Grotesk","Helvetica Neue",Arial,sans-serif;
+  --f-body:"IBM Plex Sans","Segoe UI",Roboto,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0f161b; --surface:#16212a; --ink:#e4eaee; --muted:#9aa8b2; --line:#2a3843;
+  --accent:#4fb8be; --accent-soft:#163338;
+  --l-infra:#93a4b3; --l-app:#6fa6e6; --l-obs:#e0a04a; --l-cloud:#6fbf92; --l-data:#c18fdb; --l-ml:#ec7e84; --l-plat:#4fb8be;
+  --good:#6fbf92; --bad:#ec7e84; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f161b; --surface:#16212a; --ink:#e4eaee; --muted:#9aa8b2; --line:#2a3843;
+  --accent:#4fb8be; --accent-soft:#163338;
+  --l-infra:#93a4b3; --l-app:#6fa6e6; --l-obs:#e0a04a; --l-cloud:#6fbf92; --l-data:#c18fdb; --l-ml:#ec7e84; --l-plat:#4fb8be;
+  --good:#6fbf92; --bad:#ec7e84; color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.55;margin:0}
+.wrap{max-width:1120px;margin:0 auto;padding-inline:20px;padding-block:40px 64px;display:grid;gap:44px}
+a{color:var(--accent)}
+a:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+h1,h2,h3{font-family:var(--f-display);text-wrap:balance;margin:0}
+.eyebrow{font-family:var(--f-mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+
+/* En-tête */
+header{display:grid;gap:14px;max-width:760px}
+h1{font-size:clamp(34px,6vw,56px);font-weight:800;letter-spacing:-.02em;line-height:1.02}
+h1 span{color:var(--accent)}
+.lede{font-size:17px;color:var(--muted);max-width:62ch;margin:0}
+.meta{display:flex;flex-wrap:wrap;gap:8px 18px;font-family:var(--f-mono);font-size:12.5px;color:var(--muted)}
+
+/* Carte */
+.map{display:grid;gap:14px}
+.map-head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:8px}
+h2{font-size:22px;font-weight:700}
+.hint{font-size:13px;color:var(--muted)}
+.scroller{overflow-x:auto;padding-bottom:6px}
+.flow{display:grid;grid-template-columns:repeat(6,minmax(150px,1fr));gap:0;min-width:900px;position:relative}
+.node{appearance:none;border:0;background:none;padding:0 14px 0 0;text-align:left;cursor:pointer;color:inherit;font:inherit;display:grid;grid-template-rows:auto 1fr;position:relative}
+.node:last-child{padding-right:0}
+.node::after{content:"";position:absolute;top:21px;right:0;width:14px;height:2px;background:var(--line)}
+.node:last-child::after{display:none}
+.tag{display:flex;align-items:center;gap:8px;font-family:var(--f-mono);font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--c);height:44px;border-top:4px solid var(--c);padding-top:8px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:14px 14px 16px;display:grid;gap:8px;align-content:start;transition:border-color .15s,box-shadow .15s,transform .15s}
+.card h3{font-size:16.5px;font-weight:700;line-height:1.2}
+.card p{margin:0;font-size:13.2px;color:var(--muted);line-height:1.45}
+.repo{font-family:var(--f-mono);font-size:11.5px;color:var(--c);word-break:break-all}
+.node:hover .card{border-color:var(--c)}
+.node[aria-pressed="true"] .card{border-color:var(--c);box-shadow:0 0 0 1px var(--c),0 6px 18px -10px var(--c);transform:translateY(-2px)}
+.band{grid-column:2 / span 2;margin-top:12px;border:1.5px dashed var(--l-cloud);border-radius:6px;padding:8px 12px;display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;justify-content:space-between;cursor:pointer;background:none;color:inherit;font:inherit;text-align:left}
+.band[aria-pressed="true"]{background:var(--surface);box-shadow:0 0 0 1px var(--l-cloud)}
+.band b{font-family:var(--f-display);font-size:14.5px}
+.band span{font-family:var(--f-mono);font-size:11.5px;color:var(--l-cloud)}
+.band small{font-size:12.5px;color:var(--muted)}
+
+/* Fiche */
+.detail{background:var(--surface);border:1px solid var(--line);border-left:5px solid var(--c);border-radius:6px;padding:24px clamp(18px,3vw,32px);display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:28px}
+.detail h3{font-size:26px;font-weight:800;letter-spacing:-.01em}
+.detail .why{font-size:15.5px;margin:10px 0 0;max-width:62ch}
+.detail ul{margin:14px 0 0;padding-left:18px;display:grid;gap:6px;font-size:14.2px}
+.detail li::marker{color:var(--c)}
+.side{display:grid;gap:16px;align-content:start}
+.kpi{border-top:1px solid var(--line);padding-top:12px}
+.kpi .v{font-family:var(--f-display);font-size:30px;font-weight:800;line-height:1.05;color:var(--c);font-variant-numeric:tabular-nums}
+.kpi .l{font-size:13px;color:var(--muted);margin-top:4px}
+.links{display:grid;gap:8px}
+.links a{display:flex;justify-content:space-between;gap:10px;align-items:center;border:1px solid var(--line);border-radius:5px;padding:9px 12px;text-decoration:none;color:var(--ink);font-family:var(--f-mono);font-size:12.5px;min-width:0}
+.links a span{overflow-wrap:anywhere}
+.links a:hover{border-color:var(--c)}
+.links a::after{content:"↗";color:var(--c);flex:none}
+
+/* Cascade (fiche M) */
+.cascade{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:14px;font-family:var(--f-mono);font-size:12px}
+.cascade i{font-style:normal;padding:4px 8px;border-radius:4px;background:var(--accent-soft);color:var(--ink)}
+.cascade em{font-style:normal;color:var(--muted)}
+
+/* Lecture + résultats */
+.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.25fr);gap:40px}
+ol.path{margin:16px 0 0;padding:0;list-style:none;display:grid;gap:0;counter-reset:s}
+ol.path li{counter-increment:s;display:grid;grid-template-columns:34px minmax(0,1fr);gap:10px;padding:10px 0;border-top:1px solid var(--line)}
+ol.path li::before{content:counter(s,decimal-leading-zero);font-family:var(--f-mono);font-size:12px;color:var(--muted);padding-top:3px}
+ol.path b{font-family:var(--f-mono);font-weight:500;font-size:13px}
+ol.path span{display:block;font-size:13.5px;color:var(--muted)}
+table{width:100%;border-collapse:collapse;font-size:14px;margin-top:16px}
+th,td{text-align:left;padding:10px 10px 10px 0;border-top:1px solid var(--line);vertical-align:top}
+th{font-family:var(--f-mono);font-weight:500;font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);border-top:0}
+td.num{font-variant-numeric:tabular-nums;white-space:nowrap}
+.from{color:var(--bad);text-decoration:line-through;text-decoration-thickness:1px}
+.to{color:var(--good);font-weight:600}
+.tbl{overflow-x:auto}
+footer{border-top:1px solid var(--line);padding-top:18px;display:flex;flex-wrap:wrap;justify-content:space-between;gap:10px;font-size:13px;color:var(--muted)}
+
+@media (max-width:820px){
+  .detail,.two{grid-template-columns:minmax(0,1fr)}
+}
+@media (max-width:640px){
+  .scroller{overflow:visible}
+  .flow{grid-template-columns:minmax(0,1fr);min-width:0;gap:10px}
+  .node{padding:0}
+  .node::after{display:none}
+  .tag{height:auto;padding-block:8px 6px}
+  .band{grid-column:1;margin-top:0}
+}
+@media (prefers-reduced-motion:reduce){.card{transition:none}.node[aria-pressed="true"] .card{transform:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Projet de fin d'études · Data Engineering · 2026</div>
+    <h1>NexShop <span>AIOps</span></h1>
+    <p class="lede">Une plateforme e-commerce en microservices sur Kubernetes, dont la supervision passe d'alertes Grafana à seuils fixes à quatre modèles de machine learning : détecter une anomalie, identifier la panne, prédire le crash, adapter les seuils.</p>
+    <div class="meta"><span>Mabrouka Messaoudi</span><span>8 dépôts GitHub</span><span>Cluster local hybride + GKE</span></div>
+  </header>
+
+  <section class="map" aria-labelledby="map-title">
+    <div class="map-head">
+      <h2 id="map-title">Le système, couche par couche</h2>
+      <span class="hint">Cliquez sur une couche pour voir son rôle, ses choix et son dépôt.</span>
+    </div>
+    <div class="scroller">
+      <div class="flow" id="flow"></div>
+    </div>
+    <article class="detail" id="detail" aria-live="polite"></article>
+  </section>
+
+  <section class="two">
+    <div>
+      <h2>Ordre de lecture conseillé</h2>
+      <ol class="path" id="path"></ol>
+    </div>
+    <div>
+      <h2>Résultats des quatre modèles</h2>
+      <div class="tbl">
+      <table>
+        <thead><tr><th>Modèle</th><th>Question</th><th>Résultat</th></tr></thead>
+        <tbody>
+          <tr><td><b>M1</b> · LOF</td><td>Ce pod est-il anormal ?</td><td class="num">Rappel 100 % (OOM, CrashLoop, CPU), 92,7 % (DB Down)<br>Fausses alertes voisines <span class="from">85,9 %</span> → <span class="to">11,9 %</span></td></tr>
+          <tr><td><b>M2</b> · Gradient Boosting</td><td>Quelle panne ?</td><td class="num">F1 macro <span class="to">0,987</span> · accuracy 98,6 %<br>5 classes, 283 lignes de test</td></tr>
+          <tr><td><b>M3</b> · Gradient Boosting</td><td>Dans combien de temps le crash OOM ?</td><td class="num">Erreur moyenne <span class="to">61,6 s</span> (R² 0,53)<br>contre 382 s pour une extrapolation naïve</td></tr>
+          <tr><td><b>M4</b> · ARIMA</td><td>Cette valeur est-elle normale maintenant ?</td><td class="num">Fausses alertes <span class="from">58,8 %</span> → <span class="to">4,8 %</span><br>sur les profils high et Black Friday</td></tr>
+        </tbody>
+      </table>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <span>Code source, données et modèles : <a href="https://github.com/Mabrouka-Messaoudi" target="_blank" rel="noopener">github.com/Mabrouka-Messaoudi</a></span>
+    <span>Point d'entrée GitHub : <a href="https://github.com/Mabrouka-Messaoudi/nexshop-aiops" target="_blank" rel="noopener">nexshop-aiops</a></span>
+  </footer>
+</div>
+
+<script>
+const GH = "https://github.com/Mabrouka-Messaoudi/";
+const L = [
+  { id:"infra", c:"--l-infra", tag:"Infrastructure", title:"Cluster hybride",
+    short:"4 nœuds Kubernetes sur deux PC, VirtualBox et KVM.",
+    repos:["cluster-k8s"],
+    why:"Un cluster Kubernetes réel, réparti sur deux machines physiques, plutôt qu'un cluster à un nœud : les pannes, la latence réseau et la contention mémoire y sont réelles, ce qui rend les données de supervision crédibles.",
+    points:["Vagrant crée les VMs (VirtualBox sous Windows, KVM sous Linux), Ansible installe Kubernetes 1.29 avec kubeadm","Réseau Flannel sur le LAN, CIDR distincts pour coexister avec un premier cluster","Playbooks idempotents : le cluster complet se reconstruit en une seule commande"],
+    kpi:[["4 nœuds","1 control plane, 3 workers"],["2 hyperviseurs","VirtualBox et KVM, sur deux PC"]] },
+  { id:"app", c:"--l-app", tag:"Application", title:"NexShop",
+    short:"5 microservices Spring Boot, frontend Angular, Keycloak, Kafka.",
+    repos:["microservices-java-k8s-monitoring","microservices-angular"],
+    why:"Le système à superviser : une boutique en ligne complète, avec authentification, base relationnelle et documentaire, messagerie asynchrone et appels entre services. Chaque service est instrumenté dès le départ pour produire métriques, logs et traces.",
+    points:["API Gateway avec circuit breaker, services produits, commandes, stock et notifications","OAuth2 / OpenID Connect avec Keycloak, frontend en HTTPS avec PKCE","Événements de commande en Avro sur Kafka, MySQL et MongoDB","CI GitHub Actions : images Docker construites et publiées à chaque push"],
+    kpi:[["6 services","+ Keycloak, Kafka, MySQL, MongoDB"],["3 signaux","métriques, logs et traces par service"]] },
+  { id:"obs", c:"--l-obs", tag:"Observabilité", title:"Stack de monitoring",
+    short:"Prometheus, Grafana, Loki, Promtail, Tempo, installés par Helm.",
+    repos:["monitoring-stack"],
+    why:"La source de toutes les données des modèles. Elle est isolée sur un nœud dédié, pour que la supervision ne perturbe pas l'application qu'elle mesure.",
+    points:["kube-prometheus-stack, Loki, Promtail et Tempo en charts Helm, versions figées","Nœud de monitoring réservé par label et taint","ServiceMonitor qui collecte les métriques Spring Boot toutes les 15 s","Prometheus, Loki et Tempo exposés pour le collecteur de données"],
+    kpi:[["4 charts","versions figées dans le dépôt"],["15 s","intervalle de scrape"]] },
+  { id:"data", c:"--l-data", tag:"Données", title:"Collecte du dataset",
+    short:"Charge k6, injection de pannes, une ligne par pod toutes les 10 s.",
+    repos:["nexshop-data-collection"],
+    why:"Il n'existait pas de jeu de données de pannes pour ce système : il a été construit. Chaque ligne est labellisée au moment même de sa collecte par le script qui injecte la panne, ce qui évite un étiquetage manuel après coup.",
+    points:["Phase A : trafic normal sous trois profils (normal, high, Black Friday) calibrés au préalable","Phase B : OOM Kill, CrashLoop, base de données indisponible, CPU throttling","Chaque panne encadrée d'une phase avant et d'une phase de récupération","33 colonnes par ligne, issues de PromQL, LogQL et TraceQL"],
+    kpi:[["4 pannes","injectées avec des paramètres variés"],["10 s","une ligne par pod et par cycle"]] },
+  { id:"ml", c:"--l-ml", tag:"Modèles", title:"Quatre modèles",
+    short:"Détection, classification, prédiction, seuils. Démarche CRISP-DM.",
+    repos:["nexshop-aiops-models"],
+    why:"Chaque modèle répond à une question différente d'un ingénieur d'astreinte. Ils sont pensés pour s'enchaîner : M2 et M3 ne travaillent que lorsque l'étape précédente a détecté quelque chose.",
+    points:["M1 · Local Outlier Factor, entraîné sur le seul trafic normal","M2 · Gradient Boosting, 5 classes de panne","M3 · Gradient Boosting, temps restant avant un OOM, validé run par run","M4 · un modèle ARIMA par service et par métrique, intervalle de prévision comme seuil"],
+    cascade:true,
+    kpi:[["F1 0,987","classification des pannes (M2)"],["58,8 → 4,8 %","fausses alertes, seuils fixes vs ARIMA (M4)"]] },
+  { id:"plat", c:"--l-plat", tag:"Plateforme", title:"Command Center",
+    short:"API FastAPI + cockpit React : les modèles en temps réel.",
+    repos:["nexshop-aiops-platform"],
+    why:"Les modèles servis en production : une API qui les enchaîne et un cockpit qui montre chaque décision. En mode mystère, une panne réelle est rejouée sans que le pipeline sache laquelle, et son diagnostic n'est comparé à la vérité qu'à la fin.",
+    points:["Cascade M1 → M2 → M3, M4 en parallèle, en REST et en WebSocket","Rejeu de pannes réelles, mode mystère, upload d'un run brut, flux live du collecteur","Démo M4 : un Black Friday soutenu n'alerte plus, le vrai pic oui","Déployé sur GKE à côté de la stack de monitoring"],
+    kpi:[["5 modes","de démonstration dans le cockpit"],["0 indice","sur la panne réelle en mode mystère"]] }
+];
+const CLOUD = { id:"cloud", c:"--l-cloud", tag:"Migration cloud", title:"NexShop sur GKE",
+  repos:["nexshop-gke"],
+  why:"La même application et la même observabilité, déplacées sur Google Kubernetes Engine : des nœuds plus robustes pour les longues collectes sous charge, un stockage managé et un accès public.",
+  points:["Cluster nexshop-cluster en europe-west9 (Paris), trois node pools dont un dédié au monitoring","Accès public par NodePort et nom DuckDNS, mis à jour à chaque redémarrage","Arrêt et démarrage des node pools par script pour maîtriser les coûts","Déploiement de l'application et du monitoring scripté, secrets hors du dépôt"],
+  kpi:[["3 node pools","dont un réservé au monitoring"],["0 nœud","entre deux sessions, pour le coût"]] };
+
+const ORDER = [
+  ["cluster-k8s","l'infrastructure de départ"],
+  ["microservices-java-k8s-monitoring","l'application instrumentée"],
+  ["monitoring-stack","la collecte des signaux"],
+  ["nexshop-gke","la migration vers GKE"],
+  ["nexshop-data-collection","la construction du dataset"],
+  ["nexshop-aiops-models","les quatre modèles"],
+  ["nexshop-aiops-platform","la mise en production"],
+  ["microservices-angular","annexe : première version du frontend"]
+];
+
+const flow = document.getElementById("flow");
+const detail = document.getElementById("detail");
+const all = [...L, CLOUD];
+
+L.forEach(l => {
+  const b = document.createElement("button");
+  b.className = "node"; b.type = "button"; b.dataset.id = l.id;
+  b.style.setProperty("--c", `var(${l.c})`);
+  b.setAttribute("aria-pressed","false");
+  b.innerHTML = `<div class="tag">${l.tag}</div><div class="card"><h3>${l.title}</h3><p>${l.short}</p><div class="repo">${l.repos[0]}</div></div>`;
+  b.addEventListener("click", () => select(l.id));
+  flow.appendChild(b);
+});
+const band = document.createElement("button");
+band.className = "band"; band.type = "button"; band.dataset.id = "cloud";
+band.setAttribute("aria-pressed","false");
+band.innerHTML = `<b>Migration vers GKE</b><small>application + observabilité</small><span>nexshop-gke</span>`;
+band.addEventListener("click", () => select("cloud"));
+flow.appendChild(band);
+
+function select(id){
+  const l = all.find(x => x.id === id) || L[0];
+  document.querySelectorAll("[data-id]").forEach(el => el.setAttribute("aria-pressed", el.dataset.id === l.id ? "true" : "false"));
+  detail.style.setProperty("--c", `var(${l.c})`);
+  const cascade = l.cascade ? `<div class="cascade" aria-label="Enchaînement des modèles"><i>M1 anomalie ?</i><em>→ si oui</em><i>M2 quelle panne ?</i><em>→ si OOM</em><i>M3 temps restant</i><em>·</em><i>M4 en parallèle</i></div>` : "";
+  detail.innerHTML = `
+    <div>
+      <div class="eyebrow" style="color:var(--c)">${l.tag}</div>
+      <h3>${l.title}</h3>
+      <p class="why">${l.why}</p>
+      ${cascade}
+      <ul>${l.points.map(p => `<li>${p}</li>`).join("")}</ul>
+    </div>
+    <div class="side">
+      ${l.kpi.map(k => `<div class="kpi"><div class="v">${k[0]}</div><div class="l">${k[1]}</div></div>`).join("")}
+      <div class="links">${l.repos.map(r => `<a href="${GH}${r}" target="_blank" rel="noopener"><span>${r}</span></a>`).join("")}</div>
+    </div>`;
+  try { history.replaceState(null, "", "#" + l.id); } catch(e) {}
+}
+
+const path = document.getElementById("path");
+ORDER.forEach(([r, d]) => {
+  const li = document.createElement("li");
+  li.innerHTML = `<div><b><a href="${GH}${r}" target="_blank" rel="noopener">${r}</a></b><span>${d}</span></div>`;
+  path.appendChild(li);
+});
+
+const start = (location.hash || "").replace("#","");
+select(all.some(x => x.id === start) ? start : "infra");
+</script>
+</body>
+</html>
